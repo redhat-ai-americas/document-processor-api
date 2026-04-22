@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "document-processor-api.fullname" . }}
+  labels:
+    {{- include "document-processor-api.labels" . | nindent 4 }}
+data:
+  # Compute device — overridden to "cuda" when gpu.enabled=true
+  DEVICE: {{ include "document-processor-api.device" . | quote }}
+  # Python logging level
+  LOG_LEVEL: {{ .Values.config.logLevel | quote }}
+  # Maximum upload size (MB)
+  MAX_FILE_SIZE_MB: {{ .Values.config.maxFileSizeMb | quote }}
+  # FastAPI debug mode
+  DEBUG: {{ .Values.config.debug | quote }}
+  # OpenMP thread count for inference
+  OMP_NUM_THREADS: {{ .Values.config.ompNumThreads | quote }}
+  # Seconds uvicorn waits for in-flight requests to finish after SIGTERM before forcibly closing
+  GRACEFUL_SHUTDOWN_TIMEOUT: {{ .Values.config.gracefulShutdownTimeout | quote }}

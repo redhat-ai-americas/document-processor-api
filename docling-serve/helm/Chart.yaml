@@ -1,0 +1,11 @@
+apiVersion: v2
+name: docling-serve
+description: Docling document conversion server with RapidOCR pipeline.
+type: application
+version: 0.1.0
+appVersion: "1.1"
+keywords:
+  - docling
+  - ocr
+  - document-conversion
+  - openshift

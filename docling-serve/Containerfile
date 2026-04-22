@@ -1,0 +1,30 @@
+#FROM image-registry.openshift-image-registry.svc:5000/redhat-ods-applications/runtime-pytorch
+FROM registry.redhat.io/rhoai/odh-pipeline-runtime-pytorch-cuda-py312-rhel9@sha256:aa457e7394ba73350f5c8e08c56ddba126d9472197e7669c9eb7daa2c02e6777
+
+RUN pip install docling[rapidocr]==2.75.0 docling-serve[ui]==1.14.0 opencv-python-headless==4.12.0.88
+
+ENV OMP_NUM_THREADS=4 \
+    DOCLING_ARTIFACTS_PATH=/opt/app-root/src/.cache/docling/models \
+    HF_HOME=/tmp/ \
+    TORCH_HOME=/tmp/
+
+ENV DOCLING_SERVE_ENABLE_UI=true
+ENV DOCLING_SERVE_MAX_SYNC_WAIT=900
+
+ARG MODELS_LIST="layout tableformer rapidocr"
+
+RUN echo "Downloading models..." && \
+    HF_HUB_DOWNLOAD_TIMEOUT="90" && \
+    HF_HUB_ETAG_TIMEOUT="90" && \
+    docling-tools models download -o "${DOCLING_ARTIFACTS_PATH}" $MODELS_LIST && \
+    chown -R 1001:0 ${DOCLING_ARTIFACTS_PATH} && \
+    chmod -R g=u ${DOCLING_ARTIFACTS_PATH}
+
+WORKDIR /opt/app-root/src
+
+# Expose the target port
+EXPOSE 8080
+
+# Run the server
+# The command 'docling-serve run' will respect the ENV variables above
+ENTRYPOINT ["docling-serve", "run", "--host", "0.0.0.0", "--port", "8080", "--timeout-keep-alive", "900"]

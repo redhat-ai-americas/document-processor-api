@@ -1,0 +1,27 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: document-processor-api
+  labels:
+    app.kubernetes.io/name: document-processor-api
+    app.kubernetes.io/part-of: document-processor-api
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  destination:
+    namespace: docling
+    server: https://kubernetes.default.svc
+  source:
+    path: deploy/helm
+    repoURL: https://github.com/redhat-ai-americas/document-processor-api.git
+    targetRevision: HEAD
+    helm:
+      values: ''
+      valueFiles:
+        - values.yaml
+  sources: []
+  project: default
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true

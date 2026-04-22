@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Document Converter</title>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #f0f2f5;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 2rem 1rem;
+      color: #1a1a2e;
+    }
+
+    h1 {
+      font-size: 1.75rem;
+      font-weight: 700;
+      margin-bottom: 1.5rem;
+      letter-spacing: -0.02em;
+    }
+
+    .card {
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+      padding: 2rem;
+      width: 100%;
+      max-width: 640px;
+    }
+
+    .drop-zone {
+      border: 2px dashed #cbd5e1;
+      border-radius: 8px;
+      padding: 2rem;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+      margin-bottom: 1.25rem;
+      position: relative;
+    }
+    .drop-zone:hover, .drop-zone.drag-over {
+      border-color: #6366f1;
+      background: #f5f3ff;
+    }
+    .drop-zone input[type="file"] {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+      width: 100%;
+      height: 100%;
+    }
+    .drop-zone .icon { font-size: 2rem; margin-bottom: 0.5rem; }
+    .drop-zone .label { font-size: 0.9rem; color: #64748b; }
+    .drop-zone .filename { font-size: 0.95rem; font-weight: 600; color: #4f46e5; margin-top: 0.5rem; }
+
+    button#submit-btn {
+      width: 100%;
+      padding: 0.75rem;
+      background: #4f46e5;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    button#submit-btn:hover:not(:disabled) { background: #4338ca; }
+    button#submit-btn:disabled { background: #a5b4fc; cursor: not-allowed; }
+
+    #status-bar {
+      display: none;
+      align-items: center;
+      gap: 0.75rem;
+      margin-top: 1.25rem;
+      padding: 0.75rem 1rem;
+      background: #f8fafc;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      color: #475569;
+    }
+    #status-bar.visible { display: flex; }
+
+    .spinner {
+      width: 18px; height: 18px;
+      border: 2px solid #c7d2fe;
+      border-top-color: #4f46e5;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      flex-shrink: 0;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    #timer {
+      font-variant-numeric: tabular-nums;
+      font-weight: 600;
+      color: #4f46e5;
+      min-width: 5ch;
+    }
+
+    #error-box {
+      display: none;
+      margin-top: 1.25rem;
+      padding: 0.75rem 1rem;
+      background: #fef2f2;
+      border: 1px solid #fca5a5;
+      border-radius: 8px;
+      color: #b91c1c;
+      font-size: 0.875rem;
+    }
+    #error-box.visible { display: block; }
+
+    #result-section {
+      display: none;
+      width: 100%;
+      max-width: 900px;
+      margin-top: 2rem;
+    }
+    #result-section.visible { display: block; }
+
+    .result-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.75rem;
+    }
+    .result-header h2 { font-size: 1.1rem; font-weight: 600; }
+    .result-header .elapsed { font-size: 0.85rem; color: #64748b; }
+
+    .tabs {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 0.75rem;
+    }
+    .tab-btn {
+      padding: 0.35rem 0.9rem;
+      border-radius: 6px;
+      border: 1px solid #e2e8f0;
+      background: #fff;
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .tab-btn.active {
+      background: #4f46e5;
+      color: #fff;
+      border-color: #4f46e5;
+    }
+
+    #md-rendered {
+      background: #fff;
+      border-radius: 10px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+      padding: 2rem;
+      line-height: 1.7;
+      overflow-x: auto;
+    }
+    #md-rendered h1, #md-rendered h2, #md-rendered h3 {
+      margin: 1.25em 0 0.5em;
+      font-weight: 700;
+    }
+    #md-rendered p { margin: 0.75em 0; }
+    #md-rendered pre {
+      background: #f1f5f9;
+      border-radius: 6px;
+      padding: 1rem;
+      overflow-x: auto;
+      font-size: 0.85rem;
+    }
+    #md-rendered code { font-family: "Fira Code", "Cascadia Code", monospace; }
+    #md-rendered table {
+      border-collapse: collapse;
+      width: 100%;
+      margin: 1em 0;
+    }
+    #md-rendered th, #md-rendered td {
+      border: 1px solid #e2e8f0;
+      padding: 0.5rem 0.75rem;
+      text-align: left;
+    }
+    #md-rendered th { background: #f8fafc; font-weight: 600; }
+    #md-rendered img { max-width: 100%; border-radius: 4px; }
+
+    #md-raw {
+      display: none;
+      background: #1e1e2e;
+      color: #cdd6f4;
+      border-radius: 10px;
+      padding: 1.5rem;
+      font-family: "Fira Code", "Cascadia Code", monospace;
+      font-size: 0.8rem;
+      white-space: pre-wrap;
+      word-break: break-word;
+      max-height: 80vh;
+      overflow-y: auto;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+    }
+  </style>
+</head>
+<body>
+  <h1>Document Converter</h1>
+
+  <div class="card">
+    <div class="drop-zone" id="drop-zone">
+      <input type="file" id="file-input" />
+      <div class="icon">📄</div>
+      <div class="label">Drop a file here or click to browse</div>
+      <div class="filename" id="chosen-filename"></div>
+    </div>
+
+    <button id="submit-btn" disabled>Convert to Markdown</button>
+
+    <div id="status-bar">
+      <div class="spinner"></div>
+      <span>Converting&hellip;</span>
+      <span id="timer">00:00</span>
+    </div>
+
+    <div id="error-box"></div>
+  </div>
+
+  <div id="result-section">
+    <div class="result-header">
+      <h2>Result</h2>
+      <span class="elapsed" id="elapsed-display"></span>
+    </div>
+    <div class="tabs">
+      <button class="tab-btn active" id="tab-rendered" onclick="switchTab('rendered')">Rendered</button>
+      <button class="tab-btn" id="tab-raw" onclick="switchTab('raw')">Raw Markdown</button>
+    </div>
+    <div id="md-rendered"></div>
+    <pre id="md-raw"></pre>
+  </div>
+
+  <script>
+    const fileInput     = document.getElementById('file-input');
+    const dropZone      = document.getElementById('drop-zone');
+    const chosenFilename = document.getElementById('chosen-filename');
+    const submitBtn     = document.getElementById('submit-btn');
+    const statusBar     = document.getElementById('status-bar');
+    const timerEl       = document.getElementById('timer');
+    const errorBox      = document.getElementById('error-box');
+    const resultSection = document.getElementById('result-section');
+    const mdRendered    = document.getElementById('md-rendered');
+    const mdRaw         = document.getElementById('md-raw');
+    const elapsedDisplay = document.getElementById('elapsed-display');
+
+    let selectedFile = null;
+    let timerInterval = null;
+    let startTime = null;
+
+    function formatElapsed(ms) {
+      const totalSec = Math.floor(ms / 1000);
+      const m = Math.floor(totalSec / 60).toString().padStart(2, '0');
+      const s = (totalSec % 60).toString().padStart(2, '0');
+      return `${m}:${s}`;
+    }
+
+    function startTimer() {
+      startTime = Date.now();
+      timerEl.textContent = '00:00';
+      timerInterval = setInterval(() => {
+        timerEl.textContent = formatElapsed(Date.now() - startTime);
+      }, 500);
+    }
+
+    function stopTimer() {
+      clearInterval(timerInterval);
+      timerInterval = null;
+      return Date.now() - startTime;
+    }
+
+    function setFile(file) {
+      selectedFile = file;
+      chosenFilename.textContent = file.name;
+      submitBtn.disabled = false;
+    }
+
+    fileInput.addEventListener('change', () => {
+      if (fileInput.files[0]) setFile(fileInput.files[0]);
+    });
+
+    dropZone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      dropZone.classList.add('drag-over');
+    });
+    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+    dropZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropZone.classList.remove('drag-over');
+      if (e.dataTransfer.files[0]) setFile(e.dataTransfer.files[0]);
+    });
+
+    function switchTab(tab) {
+      const isRendered = tab === 'rendered';
+      document.getElementById('tab-rendered').classList.toggle('active', isRendered);
+      document.getElementById('tab-raw').classList.toggle('active', !isRendered);
+      mdRendered.style.display = isRendered ? 'block' : 'none';
+      mdRaw.style.display = isRendered ? 'none' : 'block';
+    }
+
+    submitBtn.addEventListener('click', async () => {
+      if (!selectedFile) return;
+
+      // Reset UI
+      errorBox.classList.remove('visible');
+      errorBox.textContent = '';
+      resultSection.classList.remove('visible');
+      statusBar.classList.add('visible');
+      submitBtn.disabled = true;
+      startTimer();
+
+      try {
+        const url = `/convert_to_md/?filename=${encodeURIComponent(selectedFile.name)}`;
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/octet-stream' },
+          body: selectedFile,
+        });
+
+        if (!response.ok) {
+          let detail = `HTTP ${response.status}`;
+          try {
+            const json = await response.json();
+            detail = json.detail ?? detail;
+          } catch {}
+          throw new Error(detail);
+        }
+
+        // Read streaming response
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let markdown = '';
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          markdown += decoder.decode(value, { stream: true });
+        }
+        markdown += decoder.decode(); // flush
+
+        const elapsed = stopTimer();
+        statusBar.classList.remove('visible');
+
+        mdRendered.innerHTML = marked.parse(markdown);
+        mdRaw.textContent = markdown;
+        elapsedDisplay.textContent = `Completed in ${formatElapsed(elapsed)}`;
+        switchTab('rendered');
+        resultSection.classList.add('visible');
+      } catch (err) {
+        stopTimer();
+        statusBar.classList.remove('visible');
+        errorBox.textContent = err.message || 'An unexpected error occurred.';
+        errorBox.classList.add('visible');
+      } finally {
+        submitBtn.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>

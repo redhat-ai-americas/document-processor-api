@@ -1,0 +1,117 @@
+# ---------------------------------------------------------------------------
+# Image
+# ---------------------------------------------------------------------------
+image:
+  repository: quay.io/redhat-ai-americas/docling-rapidocr-pipeline
+  tag: "1.1"
+  pullPolicy: IfNotPresent
+
+# ---------------------------------------------------------------------------
+# Replicas
+# ---------------------------------------------------------------------------
+replicaCount: 1
+
+# ---------------------------------------------------------------------------
+# Application configuration (rendered into a ConfigMap)
+# ---------------------------------------------------------------------------
+config:
+  # Host the server binds to
+  host: "0.0.0.0"
+  # Port the server listens on
+  port: "8080"
+  # Enable the built-in Swagger/UI
+  enableUi: "true"
+  # Number of OpenMP threads used by the inference runtime
+  ompNumThreads: "4"
+
+# ---------------------------------------------------------------------------
+# GPU support
+# When gpu.enabled=true the Deployment requests one nvidia.com/gpu
+# and adds the GPU node selector/toleration.
+# ---------------------------------------------------------------------------
+gpu:
+  enabled: true
+  resourceName: nvidia.com/gpu
+  count: 1
+  nodeSelector:
+    nvidia.com/gpu.present: "true"
+
+# ---------------------------------------------------------------------------
+# Resource requests / limits
+# ---------------------------------------------------------------------------
+resources:
+  requests:
+    cpu: "10"
+    memory: 12Gi
+  limits:
+    cpu: "10"
+    memory: 12Gi
+
+# ---------------------------------------------------------------------------
+# Probes
+# ---------------------------------------------------------------------------
+livenessProbe:
+  httpGet:
+    path: /health
+    port: 8080
+  initialDelaySeconds: 60
+  periodSeconds: 15
+  failureThreshold: 3
+
+readinessProbe:
+  httpGet:
+    path: /health
+    port: 8080
+  initialDelaySeconds: 30
+  periodSeconds: 10
+  failureThreshold: 3
+
+# ---------------------------------------------------------------------------
+# Service
+# ---------------------------------------------------------------------------
+service:
+  type: ClusterIP
+  port: 8080
+
+# ---------------------------------------------------------------------------
+# Route (OpenShift)
+# Enable to expose the service via an OpenShift Route.
+# ---------------------------------------------------------------------------
+route:
+  enabled: true
+  # haproxy timeout forwarded to the Route annotation
+  timeoutSeconds: 900
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect
+
+# ---------------------------------------------------------------------------
+# ServiceAccount
+# ---------------------------------------------------------------------------
+serviceAccount:
+  create: true
+  name: ""
+  annotations: {}
+
+# ---------------------------------------------------------------------------
+# Pod-level settings
+# ---------------------------------------------------------------------------
+podAnnotations: {}
+
+podSecurityContext: {}
+
+containerSecurityContext: {}
+  #allowPrivilegeEscalation: false
+  #runAsUser: 1001
+  #capabilities:
+  #  drop:
+  #    - ALL
+
+nodeSelector: {}
+
+tolerations:
+  - key: nvidia.com/gpu
+    operator: Exists
+    effect: NoSchedule
+
+affinity: {}

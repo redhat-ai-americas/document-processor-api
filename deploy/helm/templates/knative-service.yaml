@@ -1,0 +1,81 @@
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: {{ include "document-processor-api.fullname" . }}
+  labels:
+    {{- include "document-processor-api.labels" . | nindent 4 }}
+  annotations:
+    # Propagated to the OpenShift Route auto-created by Knative Serving ingress.
+    haproxy.router.openshift.io/timeout: {{ printf "%ds" (int .Values.knative.timeoutSeconds) | quote }}
+spec:
+  template:
+    metadata:
+      labels:
+        {{- include "document-processor-api.selectorLabels" . | nindent 8 }}
+      annotations:
+        # Scale to zero when no traffic; retain pods for cooldown period after last request.
+        autoscaling.knative.dev/min-scale: "0"
+        autoscaling.knative.dev/max-scale: {{ .Values.knative.maxScale | quote }}
+        autoscaling.knative.dev/scale-down-delay: {{ .Values.knative.scaleDownDelay | quote }}
+        autoscaling.knative.dev/target: {{ .Values.knative.targetConcurrency | quote }}
+        {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      timeoutSeconds: {{ .Values.knative.timeoutSeconds }}
+      serviceAccountName: {{ include "document-processor-api.serviceAccountName" . }}
+      {{- if .Values.gpu.enabled }}
+      nodeSelector:
+        {{- toYaml .Values.gpu.nodeSelector | nindent 8 }}
+        feature.node.kubernetes.io/cpu-cpuid.AVX2: "true"
+      {{- else }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: {{ .Chart.Name }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http1
+              containerPort: 8080
+              protocol: TCP
+          envFrom:
+            - configMapRef:
+                name: {{ include "document-processor-api.fullname" . }}
+          env:
+            - name: DOCLING_ARTIFACTS_PATH
+              value: /opt/app-root/src/.cache/docling/models
+            - name: HF_HOME
+              value: /tmp
+            - name: TORCH_HOME
+              value: /tmp
+          {{- with .Values.containerSecurityContext }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          resources:
+            {{- if .Values.gpu.enabled }}
+            requests:
+              {{- toYaml .Values.resources.requests | nindent 14 }}
+              {{ .Values.gpu.resourceName }}: {{ .Values.gpu.count | quote }}
+            limits:
+              {{- toYaml .Values.resources.limits | nindent 14 }}
+              {{ .Values.gpu.resourceName }}: {{ .Values.gpu.count | quote }}
+            {{- else }}
+            {{- toYaml .Values.resources | nindent 12 }}
+            {{- end }}
+          livenessProbe:
+            {{- toYaml .Values.livenessProbe | nindent 12 }}
+          readinessProbe:
+            {{- toYaml .Values.readinessProbe | nindent 12 }}

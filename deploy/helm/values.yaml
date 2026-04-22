@@ -1,0 +1,111 @@
+# ---------------------------------------------------------------------------
+# Image
+# ---------------------------------------------------------------------------
+image:
+  repository: quay.io/redhat-ai-americas/document-processor-api
+  tag: 1.0
+  pullPolicy: IfNotPresent
+
+# ---------------------------------------------------------------------------
+# Knative Serving
+# ---------------------------------------------------------------------------
+knative:
+  # How long a pod stays alive after the last request before scale-to-zero kicks in.
+  # Accepts any Go duration string: e.g. "300s", "5m", "0s" (immediate).
+  scaleDownDelay: "300s"
+  # Maximum number of replicas Knative will scale out to.
+  maxScale: "4"
+  # Number of concurrent in-flight requests per replica that triggers scale-out.
+  targetConcurrency: "10"
+  # Per-request response timeout in seconds (also propagated to the OpenShift Route
+  # as haproxy.router.openshift.io/timeout).
+  timeoutSeconds: 900
+
+# ---------------------------------------------------------------------------
+# Application configuration (rendered into a ConfigMap)
+# ---------------------------------------------------------------------------
+config:
+  # Compute device: cpu | cuda | mps
+  device: cuda
+  # Python log level: DEBUG | INFO | WARNING | ERROR | CRITICAL
+  logLevel: INFO
+  # Maximum accepted upload size in megabytes
+  maxFileSizeMb: "100"
+  # Enable FastAPI debug mode
+  debug: "false"
+  # Number of OpenMP threads used by the inference runtime
+  ompNumThreads: "4"
+  # Seconds uvicorn waits for in-flight requests after SIGTERM before forcibly closing
+  gracefulShutdownTimeout: "30"
+
+# ---------------------------------------------------------------------------
+# GPU support
+# When gpu.enabled=true the Deployment requests one nvidia.com/gpu,
+# sets device=cuda in the ConfigMap, and adds the GPU node selector.
+# ---------------------------------------------------------------------------
+gpu:
+  enabled: true
+  resourceName: nvidia.com/gpu
+  count: 1
+  nodeSelector:
+    nvidia.com/gpu.present: "true"
+
+# ---------------------------------------------------------------------------
+# Resource requests / limits
+# ---------------------------------------------------------------------------
+resources:
+  requests:
+    cpu: "15"
+    memory: 16Gi
+  limits:
+    cpu: "15"
+    memory: 16Gi
+
+# ---------------------------------------------------------------------------
+# Probes
+# ---------------------------------------------------------------------------
+livenessProbe:
+  httpGet:
+    path: /health
+    port: 8080
+  initialDelaySeconds: 30
+  periodSeconds: 15
+  failureThreshold: 3
+
+readinessProbe:
+  httpGet:
+    path: /health
+    port: 8080
+  initialDelaySeconds: 20
+  periodSeconds: 10
+  failureThreshold: 3
+
+# ---------------------------------------------------------------------------
+# ServiceAccount
+# ---------------------------------------------------------------------------
+serviceAccount:
+  create: true
+  # Override the generated name; leave empty to use the chart release name.
+  name: ""
+  annotations: {}
+
+# ---------------------------------------------------------------------------
+# Pod-level settings
+# ---------------------------------------------------------------------------
+podAnnotations: {}
+
+podSecurityContext: {}
+
+containerSecurityContext: {}
+  #allowPrivilegeEscalation: false
+  #runAsUser: 1001
+  #capabilities:
+  #  drop:
+  #    - ALL
+
+tolerations:
+  - key: nvidia.com/gpu
+    operator: Exists
+    effect: NoSchedule
+affinity: {}
+

@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "docling-serve.fullname" . }}
+  labels:
+    {{- include "docling-serve.labels" . | nindent 4 }}
+data:
+  DOCLING_SERVE_HOST: {{ .Values.config.host | quote }}
+  DOCLING_SERVE_PORT: {{ .Values.config.port | quote }}
+  DOCLING_SERVE_ENABLE_UI: {{ .Values.config.enableUi | quote }}
+  OMP_NUM_THREADS: {{ .Values.config.ompNumThreads | quote }}

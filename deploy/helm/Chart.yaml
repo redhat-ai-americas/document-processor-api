@@ -1,0 +1,11 @@
+apiVersion: v2
+name: document-processor-api
+description: FastAPI microservice that converts PDFs and other documents to Markdown or JSON using docling.
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+keywords:
+  - docling
+  - ocr
+  - document-conversion
+  - openshift
