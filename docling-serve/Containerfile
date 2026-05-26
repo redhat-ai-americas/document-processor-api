@@ -11,7 +11,7 @@ ENV OMP_NUM_THREADS=4 \
 ENV DOCLING_SERVE_ENABLE_UI=true
 ENV DOCLING_SERVE_MAX_SYNC_WAIT=900
 
-ARG MODELS_LIST="layout tableformerv2 rapidocr code_formula picture_classifier smolvlm"
+ARG MODELS_LIST="layout tableformer rapidocr code_formula picture_classifier smolvlm"
 
 RUN echo "Downloading models..." && \
     HF_HUB_DOWNLOAD_TIMEOUT="90" && \

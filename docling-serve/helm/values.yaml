@@ -3,7 +3,7 @@
 # ---------------------------------------------------------------------------
 image:
   repository: quay.io/redhat-ai-americas/docling-rapidocr-pipeline
-  tag: "1.2"
+  tag: "1.3"
   pullPolicy: IfNotPresent
 
 # ---------------------------------------------------------------------------

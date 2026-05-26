@@ -1,5 +1,5 @@
 IMAGE_NAME   	?= document-processor-api
-IMAGE_TAG    	?= 1.1
+IMAGE_TAG    	?= 1.2
 REGISTRY     	?= quay.io/redhat-ai-americas
 FULL_IMAGE   	:= $(REGISTRY)/$(IMAGE_NAME):$(IMAGE_TAG)
 PORT         	?= 8080
