@@ -1,4 +1,4 @@
-FROM quay.io/redhat-ai-americas/docling-rapidocr-pipeline:1.1
+FROM quay.io/redhat-ai-americas/docling-rapidocr-pipeline:1.2
 
 ENV OMP_NUM_THREADS=4 \
     HF_HOME=/tmp/ \
